@@ -11,12 +11,12 @@ export async function GET(request: NextRequest) {
   )
 
   try {
-    // Tendencia nacional anual del IPAA
+    // Tendencia nacional anual del IPAA — tabla tiene 37k filas
     const { data, error } = await supabase
       .from('ipaa_index')
       .select('anio, ciudad, ipaa, idx_precios, idx_smmlv, interpretacion')
       .order('anio', { ascending: true })
-      .limit(5000)
+      .limit(50000)
 
     if (error) throw error
 
