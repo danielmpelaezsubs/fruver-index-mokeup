@@ -11,45 +11,39 @@ export async function GET(request: NextRequest) {
   )
 
   try {
-    // Tendencia nacional anual del IPAA — tabla tiene 37k filas
-    const { data, error } = await supabase
-      .from('ipaa_index')
-      .select('anio, ciudad, ipaa, idx_precios, idx_smmlv, interpretacion')
+    // Usar vista pre-agregada v_ipaa_tendencia (14 filas, mucho más rápido)
+    const { data: tendenciaData, error } = await supabase
+      .from('v_ipaa_tendencia')
+      .select('anio, ipaa_promedio, idx_precios, idx_smmlv, ciudades, estado')
       .order('anio', { ascending: true })
-      .limit(50000)
 
     if (error) throw error
 
-    // Agrupar por año — mediana nacional
-    const porAnio: Record<number, number[]> = {}
-    for (const r of data || []) {
-      if (!porAnio[r.anio]) porAnio[r.anio] = []
-      if (r.ipaa != null) porAnio[r.anio].push(r.ipaa)
-    }
-    const tendencia = Object.entries(porAnio)
-      .map(([anio, vals]) => {
-        const sorted = [...vals].sort((a, b) => a - b)
-        const mid = Math.floor(sorted.length / 2)
-        const mediana = sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
-        return {
-          anio: parseInt(anio),
-          ipaa_mediana: Math.round(mediana * 10) / 10,
-          estado: mediana >= 105 ? 'MEJORO' : mediana >= 95 ? 'ESTABLE' : 'DETERIORO',
-        }
-      })
-      .sort((a, b) => a.anio - b.anio)
+    const tendencia = (tendenciaData || []).map((r: any) => ({
+      anio: r.anio,
+      ipaa_mediana: r.ipaa_promedio,
+      idx_precios: r.idx_precios,
+      idx_smmlv: r.idx_smmlv,
+      ciudades: r.ciudades,
+      estado: r.estado,
+    }))
 
-    // Si pidieron ciudad específica, también devolver serie de esa ciudad
+    // Serie de ciudad específica si la piden
     let serieCiudad = null
     if (ciudad) {
-      const ciudadData = (data || [])
-        .filter((r: any) => r.ciudad === ciudad.toLowerCase())
-      const porAnioCiudad: Record<number, number[]> = {}
-      for (const r of ciudadData) {
-        if (!porAnioCiudad[r.anio]) porAnioCiudad[r.anio] = []
-        if (r.ipaa != null) porAnioCiudad[r.anio].push(r.ipaa)
+      const { data: ciudadData } = await supabase
+        .from('ipaa_index')
+        .select('anio, ipaa')
+        .eq('ciudad', ciudad.toLowerCase())
+        .order('anio', { ascending: true })
+        .limit(2000)
+
+      const porAnio: Record<number, number[]> = {}
+      for (const r of ciudadData || []) {
+        if (!porAnio[r.anio]) porAnio[r.anio] = []
+        if (r.ipaa != null) porAnio[r.anio].push(r.ipaa)
       }
-      serieCiudad = Object.entries(porAnioCiudad)
+      serieCiudad = Object.entries(porAnio)
         .map(([anio, vals]) => ({
           anio: parseInt(anio),
           ipaa: Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10,
