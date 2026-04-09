@@ -60,19 +60,19 @@ export default function Home() {
           <Link href="/dashboards/fruver-index" className={styles.dashboardCard}>
             <div className={styles.dashboardIcon}>📊</div>
             <h3>Fruver Index</h3>
-            <p>Índice de precios tipo Big Mac</p>
+            <p>17 productos clave · Índice tipo Big Mac · 87 ciudades</p>
           </Link>
 
           <Link href="/dashboards/mir" className={styles.dashboardCard}>
             <div className={styles.dashboardIcon}>📈</div>
             <h3>MIR v2.0</h3>
-            <p>Inflación real vs IPC oficial</p>
+            <p>363 productos · 8 grupos · Inflación real vs IPC DANE</p>
           </Link>
 
           <Link href="/dashboards/comparativa" className={styles.dashboardCard}>
             <div className={styles.dashboardIcon}>🔄</div>
-            <h3>Canasta DANE</h3>
-            <p>71 productos mapeados</p>
+            <h3>Canasta Familiar DANE</h3>
+            <p>71 categorías IPC · 100% cobertura · Comparativa SIPSA</p>
           </Link>
         </div>
       </section>
