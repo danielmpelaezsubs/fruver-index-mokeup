@@ -4,6 +4,11 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import styles from './page.module.css'
 
+const SECTORES = [
+  { href: '/sectores/retailer', icon: '🛒', titulo: 'Vista Retailer', desc: 'Compre barato esta semana · Evite caros · Arbitraje nacional · Riesgo de precio', color: '#27ae60' },
+  { href: '/sectores/gobierno', icon: '🏛️', titulo: 'Vista Gobierno', desc: 'IPAA · MIR vs IPC DANE · Ranking ciudades · Seguridad alimentaria', color: '#8e44ad' },
+]
+
 const DASHBOARDS = [
   { href: '/dashboards/fruver-index', icon: '📊', titulo: 'Fruver Index (FI)', desc: '71 productos · Canasta DANE · Precio referencia por ciudad', color: '#2980b9' },
   { href: '/dashboards/semaforo',     icon: '🚦', titulo: 'Semáforo IOC',        desc: '402 productos · ¿Está caro o barato vs su historial?', color: '#e74c3c' },
@@ -81,6 +86,21 @@ export default function Home() {
         </div>
       )}
 
+      {/* Vistas por Sector */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>🎯 Vistas por Sector</h2>
+        <div className={styles.dashboardGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))' }}>
+          {SECTORES.map(s => (
+            <Link key={s.href} href={s.href} className={styles.dashboardCard} style={{ '--accent': s.color, background: 'rgba(255,255,255,0.97)' } as any}>
+              <div className={styles.dashboardIcon}>{s.icon}</div>
+              <h3 className={styles.dashboardTitulo}>{s.titulo}</h3>
+              <p className={styles.dashboardDesc}>{s.desc}</p>
+              <div className={styles.dashboardArrow} style={{ color: s.color }}>Abrir vista →</div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       {/* Dashboards */}
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Centro de Inteligencia</h2>
@@ -111,6 +131,13 @@ export default function Home() {
           </div>
         </section>
       )}
+
+      {/* CTA Precios */}
+      <section style={{ padding: '2rem', textAlign: 'center' }}>
+        <Link href="/precios" style={{ display: 'inline-block', background: '#f39c12', color: 'white', padding: '0.9rem 2.5rem', borderRadius: 12, textDecoration: 'none', fontWeight: 800, fontSize: '1rem', boxShadow: '0 4px 16px rgba(243,156,18,0.4)' }}>
+          💰 Ver Planes y Precios →
+        </Link>
+      </section>
 
       {/* Footer */}
       <footer className={styles.footer}>
