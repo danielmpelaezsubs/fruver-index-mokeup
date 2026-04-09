@@ -1,10 +1,11 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import styles from './dashboard.module.css'
 
-export default function FruverIndexDashboard() {
+function DashboardContent() {
   const searchParams = useSearchParams()
   const ciudad = searchParams.get('ciudad') || 'Bogotá'
 
@@ -40,5 +41,13 @@ export default function FruverIndexDashboard() {
         <p>Fruver Index © 2026 | Datos SIPSA-DANE</p>
       </footer>
     </div>
+  )
+}
+
+export default function FruverIndexDashboard() {
+  return (
+    <Suspense fallback={<div style={{padding:'2rem',color:'white',background:'#1a5276',minHeight:'100vh'}}>Cargando...</div>}>
+      <DashboardContent />
+    </Suspense>
   )
 }
