@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
         .select('ciudad, fi_valor, productos_cubiertos')
         .eq('anio', anioNum)
         .order('fi_valor', { ascending: false })
-        .limit(500)
+        .limit(5000)
 
       if (error) throw error
 
@@ -45,11 +45,12 @@ export async function GET(request: NextRequest) {
     }
 
     if (tipo === 'ciudades') {
-      // Lista de ciudades disponibles en fi_index
+      // Traer todas las filas de fi_index para extraer ciudades únicas
+      // fi_index tiene ~21k filas — caben en una sola consulta
       const { data, error } = await supabase
         .from('fi_index')
         .select('ciudad')
-        .limit(2000)
+        .limit(25000)
 
       if (error) throw error
       const ciudades = [...new Set((data || []).map((d: any) => d.ciudad))].sort()
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
       .select('anio, semana, fi_valor, productos_cubiertos, precio_promedio')
       .order('anio', { ascending: true })
       .order('semana', { ascending: true })
-      .limit(2000)
+      .limit(5000)
 
     if (ciudad) query = query.eq('ciudad', ciudad.toLowerCase())
     if (anio) query = query.eq('anio', parseInt(anio))
