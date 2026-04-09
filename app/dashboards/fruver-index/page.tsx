@@ -213,7 +213,21 @@ function DashboardContent() {
                 const pct = Math.round((r.fi_promedio / maxFI) * 100)
                 const esCiudadActual = r.ciudad === ciudad.toLowerCase()
                 return (
-                  <li key={r.ciudad} className={styles.rankingItem} style={{ background: esCiudadActual ? '#eaf4fb' : 'transparent' }}>
+                  <li
+                    key={r.ciudad}
+                    className={styles.rankingItem}
+                    onClick={() => handleCiudad(r.ciudad)}
+                    title={`Ver datos de ${r.ciudad}`}
+                    style={{
+                      background: esCiudadActual ? '#eaf4fb' : 'transparent',
+                      cursor: 'pointer',
+                      borderLeft: esCiudadActual ? '4px solid #f39c12' : '4px solid transparent',
+                      paddingLeft: '0.4rem',
+                      transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => { if (!esCiudadActual) (e.currentTarget as HTMLElement).style.background = '#f5f5f5' }}
+                    onMouseLeave={e => { if (!esCiudadActual) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                  >
                     <span className={`${styles.rankingPos} ${i === 0 ? styles.gold : i === 1 ? styles.silver : i === 2 ? styles.bronze : ''}`}>
                       {i + 1}
                     </span>
@@ -228,6 +242,9 @@ function DashboardContent() {
                 )
               })}
             </ul>
+            <div style={{ marginTop: '0.8rem', fontSize: '0.78rem', color: '#7f8c8d', textAlign: 'center' }}>
+              💡 Haz clic en cualquier ciudad para cargar sus datos
+            </div>
           </div>
         </div>
 

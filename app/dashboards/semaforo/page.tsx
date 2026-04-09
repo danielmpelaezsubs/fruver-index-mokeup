@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import styles from '../fruver-index/dashboard.module.css'
@@ -16,6 +16,8 @@ export default function SemaforoDashboard() {
   const [ciudades, setCiudades] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [pagina, setPagina]   = useState(0)
+  const [selectedProducto, setSelectedProducto] = useState<string | null>(null)
+  const tablaRef = useRef<HTMLDivElement>(null)
   const POR_PAGINA = 20
 
   useEffect(() => {
@@ -41,7 +43,9 @@ export default function SemaforoDashboard() {
       .finally(() => setLoading(false))
   }, [ciudad, grupo])
 
-  const filtrados = filtro === 'TODOS' ? data : data.filter(r => r.semaforo === filtro)
+  const filtrados = data
+    .filter(r => filtro === 'TODOS' || r.semaforo === filtro)
+    .filter(r => !selectedProducto || r.producto === selectedProducto)
   const pagina_data = filtrados.slice(pagina * POR_PAGINA, (pagina + 1) * POR_PAGINA)
   const total_paginas = Math.ceil(filtrados.length / POR_PAGINA)
 
@@ -51,6 +55,15 @@ export default function SemaforoDashboard() {
 
   const totalProductos = (resumen.ROJO || 0) + (resumen.AMARILLO || 0) + (resumen.VERDE || 0)
   const pctRojo = totalProductos > 0 ? Math.round((resumen.ROJO || 0) / totalProductos * 100) : 0
+
+  const handleBarClick = (data: any) => {
+    const producto = data?.activePayload?.[0]?.payload?.producto || data?.producto
+    if (!producto) return
+    setSelectedProducto(prev => prev === producto ? null : producto)
+    setTimeout(() => {
+      tablaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 100)
+  }
 
   return (
     <div className={styles.container}>
@@ -115,12 +128,12 @@ export default function SemaforoDashboard() {
                 <div className={styles.chartTitle}>🔴 Top 10 — Más caros vs histórico</div>
                 <div className={styles.chartSub}>% de variación sobre precio promedio 2013-2026</div>
                 <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={top10rojos} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
+                  <BarChart data={top10rojos} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 0 }} onClick={handleBarClick} style={{ cursor: 'pointer' }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={v => `+${v}%`} />
                     <YAxis type="category" dataKey="producto" tick={{ fontSize: 10 }} width={130} tickFormatter={v => v.length > 18 ? v.slice(0,18)+'…' : v} />
-                    <Tooltip formatter={(v: any) => [`+${v?.toFixed(1)}%`, 'Variación vs histórico']} />
-                    <Bar dataKey="variacion_vs_historico_pct" radius={[0,4,4,0]}>
+                    <Tooltip formatter={(v: any) => [`+${v?.toFixed(1)}%`, 'Variación vs histórico']} cursor={{ fill: 'rgba(0,0,0,0.08)' }} />
+                    <Bar dataKey="variacion_vs_historico_pct" radius={[0,4,4,0]} cursor="pointer">
                       {top10rojos.map((_, i) => <Cell key={i} fill={i < 3 ? '#c0392b' : '#e74c3c'} />)}
                     </Bar>
                   </BarChart>
@@ -131,12 +144,12 @@ export default function SemaforoDashboard() {
                 <div className={styles.chartTitle}>🟢 Oportunidades — Más baratos vs histórico</div>
                 <div className={styles.chartSub}>% bajo su precio promedio histórico — Compre ahora</div>
                 <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={top10verdes} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
+                  <BarChart data={top10verdes} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 0 }} onClick={handleBarClick} style={{ cursor: 'pointer' }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={v => `${v}%`} />
                     <YAxis type="category" dataKey="producto" tick={{ fontSize: 10 }} width={130} tickFormatter={v => v.length > 18 ? v.slice(0,18)+'…' : v} />
-                    <Tooltip formatter={(v: any) => [`${v?.toFixed(1)}%`, 'Variación vs histórico']} />
-                    <Bar dataKey="variacion_vs_historico_pct" radius={[0,4,4,0]}>
+                    <Tooltip formatter={(v: any) => [`${v?.toFixed(1)}%`, 'Variación vs histórico']} cursor={{ fill: 'rgba(0,0,0,0.08)' }} />
+                    <Bar dataKey="variacion_vs_historico_pct" radius={[0,4,4,0]} cursor="pointer">
                       {top10verdes.map((_, i) => <Cell key={i} fill={i < 3 ? '#1e8449' : '#27ae60'} />)}
                     </Bar>
                   </BarChart>
@@ -144,11 +157,56 @@ export default function SemaforoDashboard() {
               </div>
             </div>
 
+            {/* Panel de detalle drill-down */}
+            {selectedProducto && (() => {
+              const item = data.find(r => r.producto === selectedProducto)
+              if (!item) return null
+              const esRojo = item.semaforo === 'ROJO'
+              return (
+                <div style={{
+                  background: esRojo ? '#fff5f5' : '#f0fdf4',
+                  border: `2px solid ${esRojo ? '#e74c3c' : '#27ae60'}`,
+                  borderRadius: 16, padding: '1.5rem', marginBottom: '1.5rem',
+                  display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: '#7f8c8d', fontWeight: 700, textTransform: 'uppercase' }}>Producto</div>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#2c3e50', textTransform: 'capitalize' }}>{item.producto}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#7f8c8d', textTransform: 'capitalize' }}>{item.grupo_alimentos}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: '#7f8c8d', fontWeight: 700, textTransform: 'uppercase' }}>Precio Actual</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 900, color: esRojo ? '#e74c3c' : '#27ae60' }}>${item.precio_actual?.toLocaleString('es-CO')}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: '#7f8c8d', fontWeight: 700, textTransform: 'uppercase' }}>Precio Histórico</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#2c3e50' }}>${item.precio_hist_media?.toLocaleString('es-CO')}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: '#7f8c8d', fontWeight: 700, textTransform: 'uppercase' }}>Variación</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 900, color: esRojo ? '#e74c3c' : '#27ae60' }}>
+                      {item.variacion_vs_historico_pct > 0 ? '+' : ''}{item.variacion_vs_historico_pct?.toFixed(1)}%
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: '#7f8c8d', fontWeight: 700, textTransform: 'uppercase' }}>Z-score</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#2c3e50' }}>{item.z_score?.toFixed(2)}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                    <button onClick={() => setSelectedProducto(null)} style={{
+                      background: '#f0f0f0', border: 'none', borderRadius: 8, padding: '0.5rem 1rem',
+                      cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, color: '#555'
+                    }}>✕ Ver todos</button>
+                  </div>
+                </div>
+              )
+            })()}
+
             {/* Tabla completa */}
-            <div className={styles.chartCard}>
+            <div className={styles.chartCard} ref={tablaRef}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.8rem' }}>
                 <div>
-                  <div className={styles.chartTitle}>Tabla Completa de Precios</div>
+                  <div className={styles.chartTitle}>{selectedProducto ? `Detalle: ${selectedProducto.charAt(0).toUpperCase() + selectedProducto.slice(1)}` : 'Tabla Completa de Precios'}</div>
                   <div className={styles.chartSub}>{filtrados.length} productos · ordenados por desviación</div>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -176,10 +234,16 @@ export default function SemaforoDashboard() {
                   </thead>
                   <tbody>
                     {pagina_data.map((r, i) => {
-                      const bg = r.semaforo === 'ROJO' ? '#fff5f5' : r.semaforo === 'VERDE' ? '#f0fdf4' : 'white'
+                      const esSeleccionado = r.producto === selectedProducto
+                      const bg = esSeleccionado
+                        ? (r.semaforo === 'ROJO' ? '#fecaca' : r.semaforo === 'VERDE' ? '#bbf7d0' : '#fef9c3')
+                        : (r.semaforo === 'ROJO' ? '#fff5f5' : r.semaforo === 'VERDE' ? '#f0fdf4' : 'white')
+                      const borderLeft = esSeleccionado
+                        ? `4px solid ${r.semaforo === 'ROJO' ? '#e74c3c' : r.semaforo === 'VERDE' ? '#27ae60' : '#f39c12'}`
+                        : undefined
                       const pctColor = r.variacion_vs_historico_pct > 0 ? '#e74c3c' : '#27ae60'
                       return (
-                        <tr key={i} style={{ background: bg, borderBottom: '1px solid #f0f0f0' }}>
+                        <tr key={i} style={{ background: bg, borderBottom: '1px solid #f0f0f0', borderLeft }}>
                           <td style={{ padding: '0.6rem 0.8rem' }}>
                             <span style={{ fontSize: '1.1rem' }}>{r.semaforo==='ROJO'?'🔴':r.semaforo==='VERDE'?'🟢':'🟡'}</span>
                           </td>

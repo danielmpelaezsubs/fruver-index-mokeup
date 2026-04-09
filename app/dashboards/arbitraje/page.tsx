@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
@@ -84,6 +84,8 @@ export default function ArbitrajePage() {
   const [grupos, setGrupos] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [selectedProducto, setSelectedProducto] = useState<string | null>(null)
+  const tablaRef = useRef<HTMLDivElement>(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -120,6 +122,15 @@ export default function ArbitrajePage() {
     pct: Math.round(r.iag_pct * 10) / 10,
     oportunidad: r.oportunidad,
   }))
+
+  const handleBarClick = (data: any) => {
+    const fullName = data?.activePayload?.[0]?.payload?.fullName
+    if (!fullName) return
+    setSelectedProducto(prev => prev === fullName ? null : fullName)
+    setTimeout(() => {
+      tablaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 150)
+  }
 
   return (
     <div className={styles.container}>
@@ -232,7 +243,7 @@ export default function ArbitrajePage() {
                 </p>
               ) : (
                 <ResponsiveContainer width="100%" height={420}>
-                  <BarChart data={chartData} layout="vertical" margin={{ top: 4, right: 60, left: 10, bottom: 4 }}>
+                  <BarChart data={chartData} layout="vertical" margin={{ top: 4, right: 60, left: 10, bottom: 4 }} onClick={handleBarClick}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                     <XAxis
                       type="number"
@@ -252,9 +263,9 @@ export default function ArbitrajePage() {
                       ]}
                       contentStyle={{ borderRadius: 8, fontSize: '0.83rem' }}
                     />
-                    <Bar dataKey="pct" radius={[0, 6, 6, 0]} label={{ position: 'right', formatter: (v: number) => `${v}%`, fontSize: 11, fill: '#1a5276' }}>
+                    <Bar dataKey="pct" radius={[0, 6, 6, 0]} label={{ position: 'right', formatter: (v: number) => `${v}%`, fontSize: 11, fill: '#1a5276' }} style={{ cursor: 'pointer' }}>
                       {chartData.map((entry, i) => (
-                        <Cell key={i} fill={barColor(entry.pct)} />
+                        <Cell key={i} fill={entry.fullName === selectedProducto ? '#8e44ad' : barColor(entry.pct)} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -262,8 +273,94 @@ export default function ArbitrajePage() {
               )}
             </div>
 
+            {/* ── Panel de detalle drill-down ── */}
+            {selectedProducto && (() => {
+              const item = data.find(r => r.producto === selectedProducto)
+              if (!item) return null
+              const ahorroPct = item.iag_pct?.toFixed(1)
+              const ahorroPesos = item.precio_ciudad_max && item.precio_ciudad_min
+                ? Math.round(item.precio_ciudad_max - item.precio_ciudad_min)
+                : null
+              return (
+                <div style={{
+                  background: 'linear-gradient(135deg, #f8f0ff, #fff)',
+                  border: '2px solid #8e44ad',
+                  borderRadius: 16,
+                  padding: '1.5rem',
+                  marginBottom: '1.5rem',
+                  animation: 'fadeIn 0.2s ease'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: '#8e44ad', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        🗺️ Oportunidad de Arbitraje Seleccionada
+                      </div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#2c3e50', textTransform: 'capitalize', marginTop: '0.3rem' }}>
+                        {item.producto}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#7f8c8d', textTransform: 'capitalize' }}>
+                        {item.grupo_alimentos}
+                      </div>
+                    </div>
+                    <button onClick={() => setSelectedProducto(null)} style={{
+                      background: '#f0f0f0', border: 'none', borderRadius: 8,
+                      padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700, color: '#555'
+                    }}>✕ Limpiar</button>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+                    <div style={{ background: '#f0fdf4', borderRadius: 12, padding: '1rem', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.75rem', color: '#27ae60', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.3rem' }}>
+                        🟢 Compre en
+                      </div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#2c3e50', textTransform: 'capitalize' }}>
+                        {item.ciudad_mas_barata || '—'}
+                      </div>
+                      <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#27ae60' }}>
+                        {fmt(item.precio_ciudad_min)}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#7f8c8d' }}>precio más bajo</div>
+                    </div>
+
+                    <div style={{ background: '#fff5f5', borderRadius: 12, padding: '1rem', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.75rem', color: '#e74c3c', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.3rem' }}>
+                        🔴 Venda en
+                      </div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#2c3e50', textTransform: 'capitalize' }}>
+                        {item.ciudad_mas_cara || '—'}
+                      </div>
+                      <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#e74c3c' }}>
+                        {fmt(item.precio_ciudad_max)}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#7f8c8d' }}>precio más alto</div>
+                    </div>
+
+                    <div style={{ background: '#f8f0ff', borderRadius: 12, padding: '1rem', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.75rem', color: '#8e44ad', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.3rem' }}>
+                        💰 Margen
+                      </div>
+                      <div style={{ fontSize: '2rem', fontWeight: 900, color: '#8e44ad' }}>
+                        {ahorroPct}%
+                      </div>
+                      {ahorroPesos && (
+                        <div style={{ fontSize: '0.85rem', color: '#7f8c8d' }}>
+                          ${ahorroPesos.toLocaleString('es-CO')} por unidad
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: '1rem', padding: '0.8rem 1rem', background: 'rgba(142,68,173,0.08)', borderRadius: 8, fontSize: '0.85rem', color: '#5d6d7e' }}>
+                    <strong>Interpretación:</strong> Comprando <em>{item.producto}</em> en {item.ciudad_mas_barata} y vendiéndolo en {item.ciudad_mas_cara}{' '}
+                    hay un diferencial de <strong style={{ color: '#8e44ad' }}>{ahorroPct}%</strong>.{' '}
+                    Este margen puede representar una oportunidad de compra directa, logística o negociación con proveedores.
+                  </div>
+                </div>
+              )
+            })()}
+
             {/* ── Table ── */}
-            <div className={styles.chartCard}>
+            <div className={styles.chartCard} ref={tablaRef}>
               <div className={styles.chartTitle}>Detalle de todas las oportunidades · {data.length} productos</div>
               <div className={styles.chartSub}>Ordenados por brecha % descendente</div>
               <div style={{ overflowX: 'auto' }}>
@@ -281,9 +378,12 @@ export default function ArbitrajePage() {
                     {data.map((row, i) => (
                       <tr
                         key={i}
+                        onClick={() => setSelectedProducto(prev => prev === row.producto ? null : row.producto)}
                         style={{
-                          background: nivelColor(row.oportunidad),
+                          background: row.producto === selectedProducto ? 'rgba(142,68,173,0.08)' : nivelColor(row.oportunidad),
                           borderBottom: '1px solid rgba(0,0,0,0.05)',
+                          cursor: 'pointer',
+                          outline: row.producto === selectedProducto ? '2px solid #8e44ad' : 'none',
                         }}
                       >
                         <td style={{ padding: '0.5rem 0.8rem', fontWeight: 600, color: '#2c3e50', textTransform: 'capitalize' }}>
