@@ -76,3 +76,4 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }
+// Fruver Index v2.0 - Thu Apr  9 09:04:24 HGMT 2026
